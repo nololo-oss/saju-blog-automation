@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "github": {
+      "version": "1.0.0",
+      "installedAt": 1770816146039
+    },
+    "pdf-extract": {
+      "version": "1.0.0",
+      "installedAt": 1770816152130
+    },
+    "calendar": {
+      "version": "1.0.0",
+      "installedAt": 1770816172479
+    }
+  }
+}
