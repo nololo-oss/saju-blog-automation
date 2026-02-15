@@ -1,0 +1,180 @@
+{
+  "name": "명운관 블로그 자동 포스팅",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "매일 06:00 KST",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 카테고리 로테이션 (요일 기반)\nconst categories = [\n  { slug: 'saju', name: '사주(四柱)', topics: [\n    '사주팔자의 기본 구성과 의미',\n    '천간(天干)과 지지(地支)의 관계',\n    '오행(五行)의 상생상극 원리',\n    '일주(日柱)로 보는 성격과 운명',\n    '대운(大運)과 세운(歲運)의 흐름',\n    '사주에서 보는 직업 적성',\n    '사주로 알아보는 건강 관리법',\n    '합(合)과 충(沖)의 의미와 영향',\n    '십신(十神)으로 보는 인간관계',\n    '사주 명리학의 역사와 발전'\n  ]},\n  { slug: 'gwansang', name: '관상(觀相)', topics: [\n    '이마의 생김새로 보는 운세',\n    '눈의 관상과 성격 분석',\n    '코의 형태와 재물운의 관계',\n    '입술 관상으로 보는 인연',\n    '귀의 크기와 형태로 보는 복',\n    '얼굴형으로 보는 전체 운세',\n    '관상에서 점과 사마귀의 의미',\n    '턱의 생김새와 말년운',\n    '눈썹으로 보는 형제운과 성격',\n    '광대뼈와 사회적 성공'\n  ]},\n  { slug: 'dream', name: '꿈해몽(解夢)', topics: [\n    '돼지꿈의 다양한 해석',\n    '뱀꿈이 의미하는 것들',\n    '물에 관한 꿈의 해몽',\n    '하늘을 나는 꿈의 의미',\n    '이빨이 빠지는 꿈 해석',\n    '죽은 사람이 나오는 꿈',\n    '불에 관한 꿈의 해몽',\n    '시험 꿈의 심리적 의미',\n    '꽃에 관한 꿈의 해석',\n    '산에 오르는 꿈의 의미'\n  ]},\n  { slug: 'fengshui', name: '풍수(風水)', topics: [\n    '거실 풍수 인테리어 기본 원칙',\n    '침실 배치와 수면의 질',\n    '현관 풍수로 좋은 기운 들이기',\n    '책상 배치와 학업 및 업무 운',\n    '주방 풍수와 재물운의 관계',\n    '화분과 식물 배치의 풍수 원리',\n    '색상 풍수로 분위기 바꾸기',\n    '거울 배치의 풍수적 의미',\n    '수납 정리와 기운의 흐름',\n    '사무실 풍수 인테리어 팁'\n  ]},\n  { slug: 'daily', name: '오늘의운세(運勢)', topics: [\n    '2026년 상반기 운세 전망',\n    '봄철 운세와 생활 조언',\n    '월별 행운의 색상과 방향',\n    '계절별 건강 운세',\n    '이번 달 재물운 높이는 방법',\n    '연애운을 높이는 일상 습관',\n    '직장인을 위한 이번 주 운세',\n    '학생을 위한 학업 운세',\n    '주간 운세와 행운의 숫자',\n    '절기별 운세와 주의사항'\n  ]}\n];\n\nconst now = new Date();\nconst dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);\nconst catIndex = dayOfYear % categories.length;\nconst category = categories[catIndex];\nconst topicIndex = Math.floor(dayOfYear / categories.length) % category.topics.length;\nconst topic = category.topics[topicIndex];\n\nconst dateStr = now.toISOString().split('T')[0];\n\nreturn [{\n  json: {\n    category: category.slug,\n    categoryName: category.name,\n    topic: topic,\n    date: dateStr,\n    dayOfYear: dayOfYear\n  }\n}];"
+      },
+      "id": "category-selector",
+      "name": "카테고리/주제 선택",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "='당신은 명운관(明運館)이라는 한국 전통 역학 블로그의 전문 필진입니다.\n\n아래 규칙에 따라 블로그 글을 작성하세요.\n\n## 작성 규칙\n1. 한국어로 작성하되, 핵심 용어는 한자를 병기합니다. (예: 사주(四柱))\n2. 이모지를 사용하지 않습니다.\n3. 본문은 800자~1500자 분량으로 작성합니다.\n4. h2(##)와 h3(###) 소제목을 활용하여 구조화합니다.\n5. 전문적이면서도 일반인이 이해할 수 있는 수준으로 작성합니다.\n6. 미신이나 맹신을 조장하지 않고, 전통 문화와 지혜의 관점에서 서술합니다.\n7. SEO를 고려한 자연스러운 키워드 배치를 합니다.\n\n## 출력 형식\n반드시 아래 형식 그대로 출력하세요. YAML 프론트매터 형식을 정확히 지켜야 합니다.\n\n---\ntitle: \"글 제목 (흥미를 끄는 제목)\"\ndescription: \"SEO용 설명 1~2문장\"\ndate: \"' + $json.date + '\"\ncategory: \"' + $json.category + '\"\ntags: [\"태그1\", \"태그2\", \"태그3\"]\n---\n\n본문 내용...\n\n## 오늘의 주제\n- 카테고리: ' + $json.categoryName + '\n- 주제: ' + $json.topic + '\n\n위 주제에 대해 글을 작성해 주세요.'"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 2000
+        }
+      },
+      "id": "openai-chat",
+      "name": "AI 콘텐츠 생성",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.8,
+      "position": [440, 0],
+      "credentials": {
+        "openAiApi": {
+          "id": "OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const content = $input.first().json.message?.content || $input.first().json.text || '';\n\n// 프론트매터 검증\nconst fmMatch = content.match(/^---\\n([\\s\\S]*?)\\n---\\n([\\s\\S]*)/);\nif (!fmMatch) {\n  throw new Error('프론트매터를 찾을 수 없습니다. AI 응답을 확인하세요.');\n}\n\nconst frontmatter = fmMatch[1];\nconst body = fmMatch[2].trim();\n\n// 필수 필드 검증\nconst requiredFields = ['title', 'description', 'date', 'category', 'tags'];\nfor (const field of requiredFields) {\n  if (!frontmatter.includes(field + ':')) {\n    throw new Error(`프론트매터에 ${field} 필드가 없습니다.`);\n  }\n}\n\n// 카테고리 검증\nconst validCategories = ['saju', 'gwansang', 'dream', 'fengshui', 'daily'];\nconst catMatch = frontmatter.match(/category:\\s*[\"']?(\\w+)[\"']?/);\nif (catMatch && !validCategories.includes(catMatch[1])) {\n  throw new Error(`잘못된 카테고리: ${catMatch[1]}`);\n}\n\n// 파일명 생성\nconst titleMatch = frontmatter.match(/title:\\s*[\"'](.+?)[\"']/);\nconst dateMatch = frontmatter.match(/date:\\s*[\"'](.+?)[\"']/);\nconst date = dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0];\n\n// 제목에서 슬러그 생성 (한글 포함)\nlet slug = titleMatch ? titleMatch[1] : 'untitled';\nslug = slug.toLowerCase()\n  .replace(/[^a-z0-9가-힣\\s-]/g, '')\n  .replace(/\\s+/g, '-')\n  .substring(0, 50);\n\nconst filename = `${date}-${slug}.md`;\n\nreturn [{\n  json: {\n    content: content,\n    filename: filename,\n    date: date\n  }\n}];"
+      },
+      "id": "validate-frontmatter",
+      "name": "프론트매터 검증 + 파일명 생성",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "command": "='cat > /home/nohhe/saju-blog/content/posts/' + $json.filename + ' << ' + \"'POSTEOF'\" + '\\n' + $json.content + '\\nPOSTEOF'"
+      },
+      "id": "save-file",
+      "name": "마크다운 파일 저장",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "command": "='cd /home/nohhe/saju-blog && git add content/posts/' + $json.filename + ' && git commit -m \"feat(content): ' + $json.date + ' 자동 포스팅\" && git push'"
+      },
+      "id": "git-push",
+      "name": "Git 커밋 & 푸시",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/nohhe/saju-blog && npx vercel --prod --yes 2>&1 | tail -5"
+      },
+      "id": "vercel-deploy",
+      "name": "Vercel 배포",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1320, 0]
+    }
+  ],
+  "connections": {
+    "매일 06:00 KST": {
+      "main": [
+        [
+          {
+            "node": "카테고리/주제 선택",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "카테고리/주제 선택": {
+      "main": [
+        [
+          {
+            "node": "AI 콘텐츠 생성",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI 콘텐츠 생성": {
+      "main": [
+        [
+          {
+            "node": "프론트매터 검증 + 파일명 생성",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "프론트매터 검증 + 파일명 생성": {
+      "main": [
+        [
+          {
+            "node": "마크다운 파일 저장",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "마크다운 파일 저장": {
+      "main": [
+        [
+          {
+            "node": "Git 커밋 & 푸시",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Git 커밋 & 푸시": {
+      "main": [
+        [
+          {
+            "node": "Vercel 배포",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Seoul"
+  },
+  "tags": [
+    {
+      "name": "blog-automation"
+    }
+  ]
+}
