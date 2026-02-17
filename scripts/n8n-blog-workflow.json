@@ -1,5 +1,5 @@
 {
-  "name": "명운관 블로그 자동 포스팅",
+  "name": "명운관 블로그 자동 포스팅 (Gemini)",
   "nodes": [
     {
       "parameters": {
@@ -29,41 +29,32 @@
     },
     {
       "parameters": {
-        "resource": "chat",
-        "operation": "complete",
-        "chatModel": "gpt-4o",
-        "prompt": {
-          "messages": [
-            {
-              "role": "system",
-              "content": "당신은 명운관(明運館)이라는 한국 전통 역학 블로그의 전문 필진입니다. 사주, 관상, 꿈해몽, 풍수, 운세 등 한국 전통 역학에 대한 깊은 지식을 가지고 있으며, 전통 문화와 지혜의 관점에서 글을 작성합니다. 미신이나 맹신을 조장하지 않습니다.\n\n## 작성 규칙\n1. 한국어로 작성하되, 핵심 용어는 한자를 병기합니다. (예: 사주(四柱))\n2. 이모지를 사용하지 않습니다.\n3. 본문은 800자~1500자 분량으로 작성합니다.\n4. h2(##)와 h3(###) 소제목을 활용하여 구조화합니다.\n5. 전문적이면서도 일반인이 이해할 수 있는 수준으로 작성합니다.\n6. SEO를 고려한 자연스러운 키워드 배치를 합니다.\n\n## 출력 형식\n반드시 아래 YAML 프론트매터 + 마크다운 본문 형식 그대로 출력하세요. 프론트매터 구분자 ---를 정확히 포함해야 합니다. 설명이나 부가 텍스트 없이 마크다운만 출력하세요."
-            },
-            {
-              "role": "user",
-              "content": "='아래 주제로 블로그 글을 작성해 주세요.\n\n카테고리: ' + $json.categoryName + '\n주제: ' + $json.topic + '\n날짜: ' + $json.date + '\n\n다음 형식으로 출력하세요:\n\n---\ntitle: \"글 제목\"\ndescription: \"SEO용 설명 1~2문장\"\ndate: \"' + $json.date + '\"\ncategory: \"' + $json.category + '\"\ntags: [\"태그1\", \"태그2\", \"태그3\"]\n---\n\n본문 내용...'"
-            }
-          ]
-        },
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: '당신은 명운관(明運館)이라는 한국 전통 역학 블로그의 전문 필진입니다. 사주, 관상, 꿈해몽, 풍수, 운세 등 한국 전통 역학에 대한 깊은 지식을 가지고 있으며, 전통 문화와 지혜의 관점에서 글을 작성합니다. 미신이나 맹신을 조장하지 않습니다.\\n\\n## 작성 규칙\\n1. 한국어로 작성하되, 핵심 용어는 한자를 병기합니다. (예: 사주(四柱))\\n2. 이모지를 사용하지 않습니다.\\n3. 본문은 800자~1500자 분량으로 작성합니다.\\n4. h2(##) 소제목을 최소 4개 이상 사용하여 구조화합니다.\\n5. 전문적이면서도 일반인이 이해할 수 있는 수준으로 작성합니다.\\n6. SEO를 고려한 자연스러운 키워드 배치를 합니다.\\n\\n## 출력 형식\\n반드시 아래 YAML 프론트매터 + 마크다운 본문 형식 그대로 출력하세요. 프론트매터 구분자 ---를 정확히 포함해야 합니다. 설명이나 부가 텍스트 없이 마크다운만 출력하세요.\\n\\n아래 주제로 블로그 글을 작성해 주세요.\\n\\n카테고리: ' + $json.categoryName + '\\n주제: ' + $json.topic + '\\n날짜: ' + $json.date + '\\n\\n다음 형식으로 출력하세요:\\n\\n---\\ntitle: \"글 제목\"\\ndescription: \"SEO용 설명 1~2문장\"\\ndate: \"' + $json.date + '\"\\ncategory: \"' + $json.category + '\"\\ntags: [\"태그1\", \"태그2\", \"태그3\"]\\n---\\n\\n본문 내용...' }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 2000 } }) }}",
         "options": {
-          "temperature": 0.7,
-          "maxTokens": 2000
+          "timeout": 60000
         }
       },
-      "id": "openai-chat",
-      "name": "AI 콘텐츠 생성",
-      "type": "n8n-nodes-base.openAi",
-      "typeVersion": 1.1,
+      "id": "gemini-text",
+      "name": "Gemini 콘텐츠 생성",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [440, 0],
       "credentials": {
-        "openAiApi": {
-          "id": "OPENAI_CREDENTIAL_ID",
-          "name": "OpenAI API"
+        "httpHeaderAuth": {
+          "id": "GEMINI_CREDENTIAL_ID",
+          "name": "Gemini API"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "const raw = $input.first().json;\nconst content = (typeof raw.message === 'string' ? raw.message : raw.message?.content) || raw.text || '';\n\n// 이전 노드에서 전달된 올바른 날짜와 카테고리 (GPT 응답보다 우선)\nconst correctDate = $('카테고리/주제 선택').first().json.date;\nconst correctCategory = $('카테고리/주제 선택').first().json.category;\n\n// 프론트매터 검증\nconst fmMatch = content.match(/^---\\n([\\s\\S]*?)\\n---\\n([\\s\\S]*)/);\nif (!fmMatch) {\n  throw new Error('프론트매터를 찾을 수 없습니다. AI 응답을 확인하세요.');\n}\n\nlet frontmatter = fmMatch[1];\nconst body = fmMatch[2].trim();\n\n// 필수 필드 검증\nconst requiredFields = ['title', 'description', 'date', 'category', 'tags'];\nfor (const field of requiredFields) {\n  if (!frontmatter.includes(field + ':')) {\n    throw new Error(`프론트매터에 ${field} 필드가 없습니다.`);\n  }\n}\n\n// 날짜를 올바른 값으로 강제 교체\nfrontmatter = frontmatter.replace(/date:\\s*[\"'].*?[\"']/, `date: \"${correctDate}\"`);\n\n// 카테고리를 올바른 slug로 강제 교체\nfrontmatter = frontmatter.replace(/category:\\s*[\"'].*?[\"']/, `category: \"${correctCategory}\"`);\n\n// 교체된 프론트매터로 콘텐츠 재조립\nconst fixedContent = `---\\n${frontmatter}\\n---\\n\\n${body}`;\n\n// 파일명 생성 (영문 슬러그 사용 - 한글 제거하여 URL 호환성 확보)\nconst titleMatch = frontmatter.match(/title:\\s*[\"'](.+?)[\"']/);\nlet slug = titleMatch ? titleMatch[1] : 'untitled';\nslug = slug.toLowerCase()\n  .replace(/[가-힣]+/g, (m) => '')\n  .replace(/[^a-z0-9\\s-]/g, '')\n  .replace(/\\s+/g, '-')\n  .replace(/-+/g, '-')\n  .replace(/^-|-$/g, '')\n  .substring(0, 50);\n\n// 한글만 있는 제목인 경우 카테고리+날짜로 슬러그 생성\nif (!slug || slug.length < 3) {\n  slug = `${correctCategory}-${correctDate}`;\n}\n\nconst filename = `${correctDate}-${slug}.md`;\n\nreturn [{\n  json: {\n    content: fixedContent,\n    filename: filename,\n    date: correctDate\n  }\n}];"
+        "jsCode": "const raw = $input.first().json;\n\n// Gemini API 응답에서 텍스트 추출\nlet content = '';\nif (raw.candidates && raw.candidates[0] && raw.candidates[0].content) {\n  const parts = raw.candidates[0].content.parts;\n  for (const part of parts) {\n    if (part.text) content += part.text;\n  }\n}\n\nif (!content) {\n  throw new Error('Gemini 응답에서 텍스트를 찾을 수 없습니다: ' + JSON.stringify(raw).substring(0, 500));\n}\n\n// 코드블록 래핑 제거 (```markdown ... ``` 또는 ```yaml ... ```)\ncontent = content.replace(/^```(?:markdown|yaml|md)?\\n/i, '').replace(/\\n```$/i, '').trim();\n\n// 이전 노드에서 전달된 올바른 날짜와 카테고리\nconst correctDate = $('카테고리/주제 선택').first().json.date;\nconst correctCategory = $('카테고리/주제 선택').first().json.category;\n\n// 프론트매터 검증\nconst fmMatch = content.match(/^---\\n([\\s\\S]*?)\\n---\\n([\\s\\S]*)/);\nif (!fmMatch) {\n  throw new Error('프론트매터를 찾을 수 없습니다. AI 응답:\\n' + content.substring(0, 300));\n}\n\nlet frontmatter = fmMatch[1];\nconst body = fmMatch[2].trim();\n\n// 필수 필드 검증\nconst requiredFields = ['title', 'description', 'date', 'category', 'tags'];\nfor (const field of requiredFields) {\n  if (!frontmatter.includes(field + ':')) {\n    throw new Error(`프론트매터에 ${field} 필드가 없습니다.`);\n  }\n}\n\n// 날짜를 올바른 값으로 강제 교체\nfrontmatter = frontmatter.replace(/date:\\s*[\"'].*?[\"']/, `date: \"${correctDate}\"`);\n\n// 카테고리를 올바른 slug로 강제 교체\nfrontmatter = frontmatter.replace(/category:\\s*[\"'].*?[\"']/, `category: \"${correctCategory}\"`);\n\n// 파일명 생성 (영문 슬러그)\nconst titleMatch = frontmatter.match(/title:\\s*[\"'](.+?)[\"']/);\nlet slug = titleMatch ? titleMatch[1] : 'untitled';\nslug = slug.toLowerCase()\n  .replace(/[가-힣]+/g, '')\n  .replace(/[^a-z0-9\\s-]/g, '')\n  .replace(/\\s+/g, '-')\n  .replace(/-+/g, '-')\n  .replace(/^-|-$/g, '')\n  .substring(0, 50);\n\nif (!slug || slug.length < 3) {\n  slug = `${correctCategory}-${correctDate}`;\n}\n\nconst filename = `${correctDate}-${slug}`;\n\n// ## 소제목 목록 추출 (이미지 삽입 위치용)\nconst h2Matches = [...body.matchAll(/^## (.+)$/gm)];\nconst h2Titles = h2Matches.map(m => m[1]);\n\nreturn [{\n  json: {\n    frontmatter: frontmatter,\n    body: body,\n    filename: filename,\n    date: correctDate,\n    category: correctCategory,\n    title: titleMatch ? titleMatch[1] : 'untitled',\n    h2Titles: h2Titles\n  }\n}];"
       },
       "id": "validate-frontmatter",
       "name": "프론트매터 검증 + 파일명 생성",
@@ -73,23 +64,43 @@
     },
     {
       "parameters": {
-        "jsCode": "const fs = require('fs');\nconst path = '/home/nohhe/saju-blog/content/posts/' + $input.first().json.filename;\nconst content = $input.first().json.content;\n\nfs.writeFileSync(path, content, 'utf8');\n\nreturn [{\n  json: {\n    filename: $input.first().json.filename,\n    date: $input.first().json.date,\n    path: path,\n    status: 'saved'\n  }\n}];"
+        "jsCode": "const title = $input.first().json.title;\nconst category = $input.first().json.category;\nconst h2Titles = $input.first().json.h2Titles || [];\n\n// 카테고리별 이미지 스타일 가이드\nconst styleGuide = {\n  saju: 'traditional Korean fortune telling elements, four pillars, yin-yang symbols, celestial stems and earthly branches, ink wash painting style',\n  gwansang: 'Korean face reading, physiognomy, traditional portrait, serene facial features, ink brush art style',\n  dream: 'dreamlike ethereal atmosphere, Korean traditional motifs, mystical clouds, moonlight, watercolor style',\n  fengshui: 'Korean interior feng shui, harmonious space, natural elements, traditional Korean room, warm lighting',\n  daily: 'Korean zodiac animals, fortune symbols, traditional patterns, auspicious colors, elegant design'\n};\n\nconst style = styleGuide[category] || styleGuide.saju;\n\n// 이미지 프롬프트 3개 생성\nconst prompts = [];\n\n// 이미지 1: 썸네일 (글 전체 주제)\nprompts.push(`A beautiful illustration for a Korean traditional fortune blog article titled '${title}'. ${style}. Clean, modern design with traditional Korean aesthetic. No text or letters in the image. Aspect ratio 16:9, high quality.`);\n\n// 이미지 2: 본문 중간 (2번째 소제목 관련)\nconst h2For2 = h2Titles[1] || title;\nprompts.push(`An illustration related to '${h2For2}' for a Korean traditional wisdom blog. ${style}. Artistic, symbolic representation. No text or letters in the image. Aspect ratio 16:9.`);\n\n// 이미지 3: 본문 중간 (3번째 또는 4번째 소제목 관련)\nconst h2For3 = h2Titles[3] || h2Titles[2] || title;\nprompts.push(`An illustration related to '${h2For3}' for a Korean traditional culture blog. ${style}. Calm, meditative atmosphere. No text or letters in the image. Aspect ratio 16:9.`);\n\nreturn [{\n  json: {\n    ...($input.first().json),\n    imagePrompts: prompts\n  }\n}];"
       },
-      "id": "save-file",
-      "name": "마크다운 파일 저장",
+      "id": "image-prompts",
+      "name": "이미지 프롬프트 생성",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [880, 0]
     },
     {
       "parameters": {
-        "jsCode": "const { execSync } = require('child_process');\nconst filename = $input.first().json.filename;\nconst date = $input.first().json.date;\n\nconst cmd = `cd /home/nohhe/saju-blog && git add content/posts/${filename} && git commit -m \"feat(content): ${date} 자동 포스팅\" && git push`;\nconst result = execSync(cmd, { encoding: 'utf8', timeout: 30000 });\n\nreturn [{\n  json: {\n    filename: filename,\n    date: date,\n    gitOutput: result,\n    status: 'pushed'\n  }\n}];"
+        "jsCode": "const fs = require('fs');\nconst https = require('https');\n\nconst data = $input.first().json;\nconst prompts = data.imagePrompts;\nconst filename = data.filename;\nconst imgDir = '/home/nohhe/saju-blog/public/images/posts';\n\n// 디렉토리 확인\nif (!fs.existsSync(imgDir)) {\n  fs.mkdirSync(imgDir, { recursive: true });\n}\n\n// Gemini API 키는 n8n credential에서 가져옴\n// HTTP Request 노드의 credential을 직접 참조할 수 없으므로\n// 환경변수에서 가져오기\nconst apiKey = process.env.GEMINI_API_KEY;\nif (!apiKey) {\n  throw new Error('GEMINI_API_KEY 환경변수가 설정되지 않았습니다. ~/.bashrc에 export GEMINI_API_KEY=your_key를 추가하고 n8n을 재시작하세요.');\n}\n\nfunction generateImage(prompt, index) {\n  return new Promise((resolve, reject) => {\n    const body = JSON.stringify({\n      contents: [{ parts: [{ text: prompt }] }],\n      generationConfig: {\n        responseModalities: ['TEXT', 'IMAGE']\n      }\n    });\n\n    const options = {\n      hostname: 'generativelanguage.googleapis.com',\n      path: `/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${apiKey}`,\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/json',\n        'Content-Length': Buffer.byteLength(body)\n      }\n    };\n\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          const json = JSON.parse(data);\n          if (!json.candidates || !json.candidates[0]) {\n            reject(new Error(`이미지 ${index + 1} 생성 실패: ` + data.substring(0, 300)));\n            return;\n          }\n          const parts = json.candidates[0].content.parts;\n          const imgPart = parts.find(p => p.inlineData);\n          if (!imgPart) {\n            reject(new Error(`이미지 ${index + 1}: inlineData를 찾을 수 없습니다`));\n            return;\n          }\n          const imgBuffer = Buffer.from(imgPart.inlineData.data, 'base64');\n          const ext = imgPart.inlineData.mimeType === 'image/jpeg' ? 'jpg' : 'png';\n          const imgFilename = `${filename}-${index + 1}.${ext}`;\n          const imgPath = `${imgDir}/${imgFilename}`;\n          fs.writeFileSync(imgPath, imgBuffer);\n          resolve({\n            filename: imgFilename,\n            path: `/images/posts/${imgFilename}`,\n            ext: ext\n          });\n        } catch (e) {\n          reject(new Error(`이미지 ${index + 1} 파싱 실패: ` + e.message));\n        }\n      });\n    });\n\n    req.on('error', (e) => reject(e));\n    req.setTimeout(90000, () => {\n      req.destroy();\n      reject(new Error(`이미지 ${index + 1} 생성 타임아웃`));\n    });\n    req.write(body);\n    req.end();\n  });\n}\n\n// 3개 이미지 순차 생성 (API rate limit 고려)\nconst images = [];\nfor (let i = 0; i < prompts.length; i++) {\n  const img = await generateImage(prompts[i], i);\n  images.push(img);\n  // rate limit 방지를 위한 짧은 대기\n  if (i < prompts.length - 1) {\n    await new Promise(r => setTimeout(r, 2000));\n  }\n}\n\nreturn [{\n  json: {\n    ...data,\n    images: images\n  }\n}];"
+      },
+      "id": "generate-images",
+      "name": "이미지 생성 + 저장",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\n\nconst data = $input.first().json;\nlet frontmatter = data.frontmatter;\nlet body = data.body;\nconst filename = data.filename;\nconst images = data.images;\n\n// 썸네일 이미지를 frontmatter에 추가\nif (images[0]) {\n  frontmatter += `\\nthumbnail: \"${images[0].path}\"`;\n}\n\n// 본문 ## 소제목 뒤에 이미지 삽입 (2번째, 4번째 소제목 뒤)\nconst lines = body.split('\\n');\nconst h2Indices = [];\nfor (let i = 0; i < lines.length; i++) {\n  if (lines[i].match(/^## /)) {\n    h2Indices.push(i);\n  }\n}\n\n// 이미지 2: 2번째 ## 뒤에 삽입\nif (images[1] && h2Indices.length >= 2) {\n  const insertIdx = h2Indices[1] + 1;\n  lines.splice(insertIdx, 0, '', `![${data.title}](${images[1].path})`, '');\n  // 인덱스 보정\n  for (let j = 2; j < h2Indices.length; j++) {\n    h2Indices[j] += 3;\n  }\n}\n\n// 이미지 3: 4번째 ## 뒤에 삽입 (없으면 3번째)\nconst img3Target = h2Indices.length >= 4 ? 3 : (h2Indices.length >= 3 ? 2 : -1);\nif (images[2] && img3Target >= 0) {\n  const insertIdx = h2Indices[img3Target] + 1;\n  lines.splice(insertIdx, 0, '', `![${data.title}](${images[2].path})`, '');\n}\n\nconst finalBody = lines.join('\\n');\nconst finalContent = `---\\n${frontmatter}\\n---\\n\\n${finalBody}`;\n\nconst filePath = `/home/nohhe/saju-blog/content/posts/${filename}.md`;\nfs.writeFileSync(filePath, finalContent, 'utf8');\n\nreturn [{\n  json: {\n    filename: `${filename}.md`,\n    date: data.date,\n    images: images.map(img => img.filename),\n    path: filePath,\n    status: 'saved'\n  }\n}];"
+      },
+      "id": "save-file",
+      "name": "마크다운 파일 저장",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { execSync } = require('child_process');\nconst filename = $input.first().json.filename;\nconst date = $input.first().json.date;\nconst images = $input.first().json.images || [];\n\n// 이미지 파일도 git add\nconst imageAdds = images.map(img => `public/images/posts/${img}`).join(' ');\nconst cmd = `cd /home/nohhe/saju-blog && git add content/posts/${filename} ${imageAdds} && git commit -m \"feat(content): ${date} 자동 포스팅\" && git push`;\nconst result = execSync(cmd, { encoding: 'utf8', timeout: 30000 });\n\nreturn [{\n  json: {\n    filename: filename,\n    date: date,\n    gitOutput: result,\n    status: 'pushed'\n  }\n}];"
       },
       "id": "git-push",
       "name": "Git 커밋 & 푸시",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1100, 0]
+      "position": [1540, 0]
     },
     {
       "parameters": {
@@ -99,7 +110,7 @@
       "name": "Vercel 배포",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1320, 0]
+      "position": [1760, 0]
     }
   ],
   "connections": {
@@ -118,14 +129,14 @@
       "main": [
         [
           {
-            "node": "AI 콘텐츠 생성",
+            "node": "Gemini 콘텐츠 생성",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "AI 콘텐츠 생성": {
+    "Gemini 콘텐츠 생성": {
       "main": [
         [
           {
@@ -137,6 +148,28 @@
       ]
     },
     "프론트매터 검증 + 파일명 생성": {
+      "main": [
+        [
+          {
+            "node": "이미지 프롬프트 생성",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "이미지 프롬프트 생성": {
+      "main": [
+        [
+          {
+            "node": "이미지 생성 + 저장",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "이미지 생성 + 저장": {
       "main": [
         [
           {
