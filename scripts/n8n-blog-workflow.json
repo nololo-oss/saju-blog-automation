@@ -30,15 +30,17 @@
     {
       "parameters": {
         "resource": "chat",
-        "model": {
-          "__rl": true,
-          "mode": "list",
-          "value": "gpt-4o"
-        },
-        "messages": {
-          "values": [
+        "operation": "complete",
+        "chatModel": "gpt-4o",
+        "prompt": {
+          "messages": [
             {
-              "content": "='당신은 명운관(明運館)이라는 한국 전통 역학 블로그의 전문 필진입니다.\n\n아래 규칙에 따라 블로그 글을 작성하세요.\n\n## 작성 규칙\n1. 한국어로 작성하되, 핵심 용어는 한자를 병기합니다. (예: 사주(四柱))\n2. 이모지를 사용하지 않습니다.\n3. 본문은 800자~1500자 분량으로 작성합니다.\n4. h2(##)와 h3(###) 소제목을 활용하여 구조화합니다.\n5. 전문적이면서도 일반인이 이해할 수 있는 수준으로 작성합니다.\n6. 미신이나 맹신을 조장하지 않고, 전통 문화와 지혜의 관점에서 서술합니다.\n7. SEO를 고려한 자연스러운 키워드 배치를 합니다.\n\n## 출력 형식\n반드시 아래 형식 그대로 출력하세요. YAML 프론트매터 형식을 정확히 지켜야 합니다.\n\n---\ntitle: \"글 제목 (흥미를 끄는 제목)\"\ndescription: \"SEO용 설명 1~2문장\"\ndate: \"' + $json.date + '\"\ncategory: \"' + $json.category + '\"\ntags: [\"태그1\", \"태그2\", \"태그3\"]\n---\n\n본문 내용...\n\n## 오늘의 주제\n- 카테고리: ' + $json.categoryName + '\n- 주제: ' + $json.topic + '\n\n위 주제에 대해 글을 작성해 주세요.'"
+              "role": "system",
+              "content": "당신은 명운관(明運館)이라는 한국 전통 역학 블로그의 전문 필진입니다. 사주, 관상, 꿈해몽, 풍수, 운세 등 한국 전통 역학에 대한 깊은 지식을 가지고 있으며, 전통 문화와 지혜의 관점에서 글을 작성합니다. 미신이나 맹신을 조장하지 않습니다.\n\n## 작성 규칙\n1. 한국어로 작성하되, 핵심 용어는 한자를 병기합니다. (예: 사주(四柱))\n2. 이모지를 사용하지 않습니다.\n3. 본문은 800자~1500자 분량으로 작성합니다.\n4. h2(##)와 h3(###) 소제목을 활용하여 구조화합니다.\n5. 전문적이면서도 일반인이 이해할 수 있는 수준으로 작성합니다.\n6. SEO를 고려한 자연스러운 키워드 배치를 합니다.\n\n## 출력 형식\n반드시 아래 YAML 프론트매터 + 마크다운 본문 형식 그대로 출력하세요. 프론트매터 구분자 ---를 정확히 포함해야 합니다. 설명이나 부가 텍스트 없이 마크다운만 출력하세요."
+            },
+            {
+              "role": "user",
+              "content": "='아래 주제로 블로그 글을 작성해 주세요.\n\n카테고리: ' + $json.categoryName + '\n주제: ' + $json.topic + '\n날짜: ' + $json.date + '\n\n다음 형식으로 출력하세요:\n\n---\ntitle: \"글 제목\"\ndescription: \"SEO용 설명 1~2문장\"\ndate: \"' + $json.date + '\"\ncategory: \"' + $json.category + '\"\ntags: [\"태그1\", \"태그2\", \"태그3\"]\n---\n\n본문 내용...'"
             }
           ]
         },
@@ -50,7 +52,7 @@
       "id": "openai-chat",
       "name": "AI 콘텐츠 생성",
       "type": "n8n-nodes-base.openAi",
-      "typeVersion": 1.8,
+      "typeVersion": 1.1,
       "position": [440, 0],
       "credentials": {
         "openAiApi": {
@@ -61,7 +63,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const content = $input.first().json.message?.content || $input.first().json.text || '';\n\n// 프론트매터 검증\nconst fmMatch = content.match(/^---\\n([\\s\\S]*?)\\n---\\n([\\s\\S]*)/);\nif (!fmMatch) {\n  throw new Error('프론트매터를 찾을 수 없습니다. AI 응답을 확인하세요.');\n}\n\nconst frontmatter = fmMatch[1];\nconst body = fmMatch[2].trim();\n\n// 필수 필드 검증\nconst requiredFields = ['title', 'description', 'date', 'category', 'tags'];\nfor (const field of requiredFields) {\n  if (!frontmatter.includes(field + ':')) {\n    throw new Error(`프론트매터에 ${field} 필드가 없습니다.`);\n  }\n}\n\n// 카테고리 검증\nconst validCategories = ['saju', 'gwansang', 'dream', 'fengshui', 'daily'];\nconst catMatch = frontmatter.match(/category:\\s*[\"']?(\\w+)[\"']?/);\nif (catMatch && !validCategories.includes(catMatch[1])) {\n  throw new Error(`잘못된 카테고리: ${catMatch[1]}`);\n}\n\n// 파일명 생성\nconst titleMatch = frontmatter.match(/title:\\s*[\"'](.+?)[\"']/);\nconst dateMatch = frontmatter.match(/date:\\s*[\"'](.+?)[\"']/);\nconst date = dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0];\n\n// 제목에서 슬러그 생성 (한글 포함)\nlet slug = titleMatch ? titleMatch[1] : 'untitled';\nslug = slug.toLowerCase()\n  .replace(/[^a-z0-9가-힣\\s-]/g, '')\n  .replace(/\\s+/g, '-')\n  .substring(0, 50);\n\nconst filename = `${date}-${slug}.md`;\n\nreturn [{\n  json: {\n    content: content,\n    filename: filename,\n    date: date\n  }\n}];"
+        "jsCode": "const raw = $input.first().json;\nconst content = (typeof raw.message === 'string' ? raw.message : raw.message?.content) || raw.text || '';\n\n// 프론트매터 검증\nconst fmMatch = content.match(/^---\\n([\\s\\S]*?)\\n---\\n([\\s\\S]*)/);\nif (!fmMatch) {\n  throw new Error('프론트매터를 찾을 수 없습니다. AI 응답을 확인하세요.');\n}\n\nconst frontmatter = fmMatch[1];\nconst body = fmMatch[2].trim();\n\n// 필수 필드 검증\nconst requiredFields = ['title', 'description', 'date', 'category', 'tags'];\nfor (const field of requiredFields) {\n  if (!frontmatter.includes(field + ':')) {\n    throw new Error(`프론트매터에 ${field} 필드가 없습니다.`);\n  }\n}\n\n// 카테고리 검증\nconst validCategories = ['saju', 'gwansang', 'dream', 'fengshui', 'daily'];\nconst catMatch = frontmatter.match(/category:\\s*[\"']?(\\w+)[\"']?/);\nif (catMatch && !validCategories.includes(catMatch[1])) {\n  throw new Error(`잘못된 카테고리: ${catMatch[1]}`);\n}\n\n// 파일명 생성\nconst titleMatch = frontmatter.match(/title:\\s*[\"'](.+?)[\"']/);\nconst dateMatch = frontmatter.match(/date:\\s*[\"'](.+?)[\"']/);\nconst date = dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0];\n\n// 제목에서 슬러그 생성 (한글 포함)\nlet slug = titleMatch ? titleMatch[1] : 'untitled';\nslug = slug.toLowerCase()\n  .replace(/[^a-z0-9가-힣\\s-]/g, '')\n  .replace(/\\s+/g, '-')\n  .substring(0, 50);\n\nconst filename = `${date}-${slug}.md`;\n\nreturn [{\n  json: {\n    content: content,\n    filename: filename,\n    date: date\n  }\n}];"
       },
       "id": "validate-frontmatter",
       "name": "프론트매터 검증 + 파일명 생성",
@@ -71,32 +73,32 @@
     },
     {
       "parameters": {
-        "command": "='cat > /home/nohhe/saju-blog/content/posts/' + $json.filename + ' << ' + \"'POSTEOF'\" + '\\n' + $json.content + '\\nPOSTEOF'"
+        "jsCode": "const fs = require('fs');\nconst path = '/home/nohhe/saju-blog/content/posts/' + $input.first().json.filename;\nconst content = $input.first().json.content;\n\nfs.writeFileSync(path, content, 'utf8');\n\nreturn [{\n  json: {\n    filename: $input.first().json.filename,\n    date: $input.first().json.date,\n    path: path,\n    status: 'saved'\n  }\n}];"
       },
       "id": "save-file",
       "name": "마크다운 파일 저장",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [880, 0]
     },
     {
       "parameters": {
-        "command": "='cd /home/nohhe/saju-blog && git add content/posts/' + $json.filename + ' && git commit -m \"feat(content): ' + $json.date + ' 자동 포스팅\" && git push'"
+        "jsCode": "const { execSync } = require('child_process');\nconst filename = $input.first().json.filename;\nconst date = $input.first().json.date;\n\nconst cmd = `cd /home/nohhe/saju-blog && git add content/posts/${filename} && git commit -m \"feat(content): ${date} 자동 포스팅\" && git push`;\nconst result = execSync(cmd, { encoding: 'utf8', timeout: 30000 });\n\nreturn [{\n  json: {\n    filename: filename,\n    date: date,\n    gitOutput: result,\n    status: 'pushed'\n  }\n}];"
       },
       "id": "git-push",
       "name": "Git 커밋 & 푸시",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [1100, 0]
     },
     {
       "parameters": {
-        "command": "cd /home/nohhe/saju-blog && npx vercel --prod --yes 2>&1 | tail -5"
+        "jsCode": "const { execSync } = require('child_process');\n\nconst result = execSync('cd /home/nohhe/saju-blog && npx vercel --prod --yes 2>&1 | tail -10', { encoding: 'utf8', timeout: 120000 });\n\nreturn [{\n  json: {\n    deployOutput: result,\n    status: 'deployed'\n  }\n}];"
       },
       "id": "vercel-deploy",
       "name": "Vercel 배포",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [1320, 0]
     }
   ],
