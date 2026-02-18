@@ -6,17 +6,13 @@ import { categories, getCategoryBySlug } from "@/lib/categories";
 import PostCard from "@/components/PostCard";
 import CTABanner from "@/components/CTABanner";
 
-export const revalidate = 60; // 1분마다 재검증
+export const dynamic = "force-dynamic";
 
 const POSTS_PER_PAGE = 10;
 
 interface PageProps {
   params: Promise<{ category: string }>;
   searchParams: Promise<{ page?: string }>;
-}
-
-export async function generateStaticParams() {
-  return []; // SSR로 전환하여 실시간 파일 읽기 허용
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
