@@ -24,11 +24,17 @@ export function getAllPostMetas(): PostMeta[] {
     };
   });
 
-  return metas.sort(
-    (a, b) =>
+  return metas.sort((a, b) => {
+    const dateDiff =
       new Date(b.frontmatter.date).getTime() -
-      new Date(a.frontmatter.date).getTime()
-  );
+      new Date(a.frontmatter.date).getTime();
+    if (dateDiff !== 0) return dateDiff;
+    // 같은 날짜: 파일명의 HHMM 시간으로 2차 정렬 (내림차순)
+    // 패턴: 2026-02-18-1932-slug.md → 인덱스 11~14가 HHMM
+    const timeA = parseInt(a.slug.slice(11, 15)) || 0;
+    const timeB = parseInt(b.slug.slice(11, 15)) || 0;
+    return timeB - timeA;
+  });
 }
 
 export function getPostMetasByCategory(category: string): PostMeta[] {

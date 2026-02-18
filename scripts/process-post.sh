@@ -40,6 +40,9 @@ with open(sys.argv[1], 'r') as f:
 text = re.sub(r'^\`\`\`(?:markdown|yaml|md)?\n', '', text, flags=re.IGNORECASE)
 text = re.sub(r'\n\`\`\`\$', '', text)
 text = text.strip()
+# Gemini가 여는 --- 를 빠뜨린 경우 자동 추가
+if not text.startswith('---') and re.match(r'^title:\s', text):
+    text = '---\n' + text
 print(text)
 " "$CONTENT_FILE")
 

@@ -7,7 +7,9 @@ import CTABanner from "@/components/CTABanner";
 export const revalidate = 60; // 1분마다 재검증
 
 export default function Home() {
-  const posts = getAllPostMetas();
+  const allPosts = getAllPostMetas();
+  const posts = allPosts.slice(0, 10);
+  const displayCategories = categories.filter((c) => c.slug !== "all");
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-12">
@@ -28,7 +30,7 @@ export default function Home() {
       {/* 카테고리 */}
       <section className="mb-10">
         <div className="grid grid-cols-7 border-y border-border">
-          {categories.map((cat) => (
+          {displayCategories.map((cat) => (
             <Link
               key={cat.slug}
               href={`/category/${cat.slug}`}
@@ -46,9 +48,17 @@ export default function Home() {
 
       {/* 최신 글 */}
       <section>
-        <h2 className="mb-1 text-[13px] font-medium text-foreground">
-          최신 글
-        </h2>
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="text-[13px] font-medium text-foreground">
+            최신 글
+          </h2>
+          <Link
+            href="/category/all"
+            className="text-[12px] text-muted transition-colors hover:text-foreground"
+          >
+            전체보기
+          </Link>
+        </div>
         {posts.length === 0 ? (
           <p className="py-8 text-center text-[13px] text-muted">
             아직 등록된 글이 없습니다.

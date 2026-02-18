@@ -8,6 +8,13 @@ export interface CategoryMeta {
 
 export const categories: CategoryMeta[] = [
   {
+    slug: "all",
+    name: "전체",
+    hanja: "全體",
+    description: "모든 카테고리의 글을 한눈에 보기",
+    color: "bg-[#4a4a4a]",
+  },
+  {
     slug: "saju",
     name: "사주",
     hanja: "四柱",

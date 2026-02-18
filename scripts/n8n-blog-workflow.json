@@ -1,18 +1,16 @@
 {
-  "name": "명운관 블로그 자동 포스팅 (Gemini)",
+  "name": "명운관 블로그 자동 포스팅 (하루 3회 랜덤)",
   "nodes": [
     {
       "parameters": {
         "rule": {
           "interval": [
-            {
-              "triggerAtHour": 6
-            }
+            {"field": "cronExpression", "expression": "0 6-23 * * *"}
           ]
         }
       },
       "id": "schedule-trigger",
-      "name": "매일 06:00 KST",
+      "name": "매시간 (06-23시)",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [0, 0]
@@ -29,32 +27,51 @@
     },
     {
       "parameters": {
-        "jsCode": "const data = JSON.parse($input.first().json.stdout);\nreturn [{ json: { date: data.date, recentList: data.recentPosts.join('\\n') } }];"
+        "jsCode": "const data = JSON.parse($input.first().json.stdout);\nconst todayCount = data.todayCount || 0;\nconst TARGET = 3;\nconst remaining = TARGET - todayCount;\n\nif (remaining <= 0) {\n  return [{ json: { shouldPost: false, date: data.date, recentList: '' } }];\n}\n\nconst now = new Date();\nconst kstHour = (now.getUTCHours() + 9) % 24;\nconst END_HOUR = 23;\nconst remainingHours = END_HOUR - kstHour + 1;\nconst probability = Math.min(remaining / Math.max(remainingHours, 1), 1);\nconst shouldPost = Math.random() < probability;\n\nreturn [{ json: { shouldPost, date: data.date, recentList: data.recentPosts.join('\\n') } }];"
       },
-      "id": "prompt-prepare",
-      "name": "프롬프트 준비",
+      "id": "posting-decision",
+      "name": "포스팅 결정",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [440, 0]
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": ""},
+          "conditions": [
+            {
+              "id": "condition-shouldpost",
+              "leftValue": "={{ $json.shouldPost }}",
+              "rightValue": true,
+              "operator": {"type": "boolean", "operation": "equals", "singleValue": true}
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-should-post",
+      "name": "포스팅 여부 확인",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
         "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: '당신은 명운관(明運館)이라는 한국 전통 역학 블로그의 전문 필진입니다.\\n\\n## 카테고리 (반드시 아래 7개 중 하나의 영문 slug를 선택)\\n- saju: 사주(四柱) - 사주팔자, 천간지지, 오행, 십신, 대운 등\\n- gwansang: 관상(觀相) - 얼굴 관상, 이마/눈/코/입/귀 등\\n- dream: 꿈해몽(解夢) - 각종 꿈의 해석과 의미\\n- fengshui: 풍수(風水) - 집/사무실 인테리어, 배치, 방위 등\\n- gunghap: 궁합(宮合) - 남녀 궁합, 띠 궁합, 사주 궁합 등\\n- jakming: 작명(作名) - 이름 짓기, 작명법, 한자 이름 등\\n- daily: 오늘의운세(運勢) - 일별/주별/월별/절기별 운세\\n\\n## 최근 포스트 목록 (중복 방지용)\\n' + $json.recentList + '\\n\\n## 지시사항\\n1. 최근 포스트와 중복되지 않는 카테고리와 주제를 자율 선택\\n2. 오늘(' + $json.date + ')의 계절/절기/시사적 맥락 고려\\n3. 특정 카테고리에 몰려있으면 다른 카테고리 선택\\n\\n## 작성 규칙\\n1. 한국어 + 핵심 용어 한자 병기\\n2. 이모지 미사용\\n3. 본문 800~1500자\\n4. h2(##) 소제목 4개 이상\\n5. 전문적이면서 이해하기 쉽게\\n\\n## 출력 형식 (코드블록 없이 마크다운만)\\n---\\ntitle: \"글 제목\"\\ndescription: \"SEO용 설명\"\\ndate: \"' + $json.date + '\"\\ncategory: \"영문slug\"\\ntags: [\"태그1\", \"태그2\", \"태그3\"]\\n---\\n\\n본문...' }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } }) }}",
-        "options": {
-          "timeout": 60000
-        }
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: '당신은 명운관(明運館)이라는 한국 전통 역학 블로그의 전문 필진입니다.\\n\\n## 카테고리 (반드시 아래 7개 중 하나의 영문 slug를 선택)\\n- saju: 사주(四柱)\\n- gwansang: 관상(觀相)\\n- dream: 꿈해몽(解夢)\\n- fengshui: 풍수(風水)\\n- gunghap: 궁합(宮合)\\n- jakming: 작명(作名)\\n- daily: 오늘의운세(運勢)\\n\\n## 최근 포스트 목록 (중복 방지용)\\n' + $json.recentList + '\\n\\n## 지시사항\\n1. 최근 포스트와 중복되지 않는 카테고리와 주제를 자율 선택\\n2. 오늘(' + $json.date + ')의 계절/절기/시사적 맥락 고려\\n3. 특정 카테고리에 몰려있으면 다른 카테고리 선택\\n\\n## 작성 규칙\\n1. 한국어 + 핵심 용어 한자 병기\\n2. 이모지 미사용\\n3. 본문 800~1500자\\n4. h2(##) 소제목 4개 이상\\n5. 전문적이면서 이해하기 쉽게\\n\\n## 출력 형식 (코드블록 없이 마크다운만)\\n---\\ntitle: \"글 제목\"\\ndescription: \"SEO용 설명\"\\ndate: \"' + $json.date + '\"\\ncategory: \"영문slug\"\\ntags: [\"태그1\", \"태그2\", \"태그3\"]\\n---\\n\\n본문...' }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } }) }}",
+        "options": {"timeout": 60000}
       },
       "id": "gemini-text",
       "name": "Gemini 콘텐츠 생성",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [660, 0],
+      "position": [880, 0],
       "credentials": {
         "httpHeaderAuth": {
           "id": "GEMINI_CREDENTIAL_ID",
@@ -64,13 +81,13 @@
     },
     {
       "parameters": {
-        "jsCode": "const raw = $input.first().json;\nconst date = $('프롬프트 준비').first().json.date;\n\nlet text = '';\ntry {\n  const parts = raw.candidates[0].content.parts;\n  for (const p of parts) {\n    if (p.text) text += p.text;\n  }\n} catch(e) {\n  text = JSON.stringify(raw).substring(0, 500);\n}\n\nconst encoded = Buffer.from(text, 'utf-8').toString('base64');\nreturn [{ json: { encoded: encoded, date: date } }];"
+        "jsCode": "const raw = $input.first().json;\nconst date = $('포스팅 결정').first().json.date;\n\nlet text = '';\ntry {\n  const parts = raw.candidates[0].content.parts;\n  for (const p of parts) {\n    if (p.text) text += p.text;\n  }\n} catch(e) {\n  text = JSON.stringify(raw).substring(0, 500);\n}\n\nconst encoded = Buffer.from(text, 'utf-8').toString('base64');\nreturn [{ json: { encoded: encoded, date: date } }];"
       },
       "id": "prepare-data",
       "name": "데이터 준비",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, 0]
+      "position": [1100, 0]
     },
     {
       "parameters": {
@@ -80,7 +97,7 @@
       "name": "포스트 처리 (검증+이미지+저장)",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
-      "position": [1100, 0]
+      "position": [1320, 0]
     },
     {
       "parameters": {
@@ -90,28 +107,34 @@
       "name": "Git 커밋 & 푸시",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
-      "position": [1320, 0]
+      "position": [1540, 0]
     },
     {
       "parameters": {
-        "command": "cd /home/nohhe/saju-blog && npx vercel --prod --yes 2>&1 | tail -10"
+        "command": "npx vercel --prod --yes 2>&1 | tail -10"
       },
       "id": "vercel-deploy",
       "name": "Vercel 배포",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
-      "position": [1540, 0]
+      "position": [1760, 0]
     }
   ],
   "connections": {
-    "매일 06:00 KST": {
+    "매시간 (06-23시)": {
       "main": [[{ "node": "최근 포스트 조회", "type": "main", "index": 0 }]]
     },
     "최근 포스트 조회": {
-      "main": [[{ "node": "프롬프트 준비", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "포스팅 결정", "type": "main", "index": 0 }]]
     },
-    "프롬프트 준비": {
-      "main": [[{ "node": "Gemini 콘텐츠 생성", "type": "main", "index": 0 }]]
+    "포스팅 결정": {
+      "main": [[{ "node": "포스팅 여부 확인", "type": "main", "index": 0 }]]
+    },
+    "포스팅 여부 확인": {
+      "main": [
+        [{ "node": "Gemini 콘텐츠 생성", "type": "main", "index": 0 }],
+        []
+      ]
     },
     "Gemini 콘텐츠 생성": {
       "main": [[{ "node": "데이터 준비", "type": "main", "index": 0 }]]

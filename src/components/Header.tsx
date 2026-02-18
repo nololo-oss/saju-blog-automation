@@ -19,7 +19,7 @@ export default function Header() {
             {categories.map((cat) => (
               <Link
                 key={cat.slug}
-                href={`/category/${cat.slug}`}
+                href={cat.slug === "all" ? "/category/all" : `/category/${cat.slug}`}
                 className="text-[13px] text-muted transition-colors hover:text-foreground"
               >
                 {cat.name}
@@ -31,7 +31,7 @@ export default function Header() {
           {categories.map((cat) => (
             <Link
               key={cat.slug}
-              href={`/category/${cat.slug}`}
+              href={cat.slug === "all" ? "/category/all" : `/category/${cat.slug}`}
               className="text-xs text-muted transition-colors hover:text-foreground"
             >
               {cat.name}

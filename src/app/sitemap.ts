@@ -14,7 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
-  const categoryEntries: MetadataRoute.Sitemap = categories.map((cat) => ({
+  const categoryEntries: MetadataRoute.Sitemap = categories.filter((cat) => cat.slug !== "all").map((cat) => ({
     url: `${BASE_URL}/category/${cat.slug}`,
     changeFrequency: "daily",
     priority: 0.6,
