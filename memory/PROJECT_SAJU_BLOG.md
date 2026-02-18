@@ -44,11 +44,13 @@ category: "saju"
 tags: ["태그1", "태그2"]
 ---
 ```
-**Category 값 (5종 중 택 1):**
+**Category 값 (7종 중 택 1):**
 - `saju` (사주)
 - `gwansang` (관상)
 - `dream` (꿈해몽)
 - `fengshui` (풍수)
+- `gunghap` (궁합)
+- `jakming` (작명)
 - `daily` (오늘의운세)
 
 ### 3. 본문 작성 가이드

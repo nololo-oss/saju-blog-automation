@@ -1,6 +1,9 @@
 #!/bin/bash
 # 블로그 포스트 처리 스크립트
-# 사용법: ./process-post.sh <gemini_response_json> <date> <category>
+# 사용법: ./process-post.sh <content_text_file> <date>
+# content_text_file: Gemini가 생성한 마크다운 텍스트 (프론트매터 포함)
+# date: YYYY-MM-DD (KST 기준)
+# 카테고리는 Gemini가 frontmatter에 지정한 값을 검증하여 사용
 
 set -e
 
@@ -9,12 +12,16 @@ POSTS_DIR="$BLOG_DIR/content/posts"
 IMG_DIR="$BLOG_DIR/public/images/posts"
 API_KEY=$(cat "$BLOG_DIR/scripts/.gemini-key" 2>/dev/null)
 
-RESPONSE_FILE="$1"
+CONTENT_FILE="$1"
 CORRECT_DATE="$2"
-CORRECT_CATEGORY="$3"
 
-if [ -z "$RESPONSE_FILE" ] || [ -z "$CORRECT_DATE" ] || [ -z "$CORRECT_CATEGORY" ]; then
-  echo '{"error": "사용법: process-post.sh <response_file> <date> <category>"}'
+if [ -z "$CONTENT_FILE" ] || [ -z "$CORRECT_DATE" ]; then
+  echo '{"error": "사용법: process-post.sh <content_file> <date>"}'
+  exit 1
+fi
+
+if [ ! -f "$CONTENT_FILE" ]; then
+  echo '{"error": "콘텐츠 파일을 찾을 수 없습니다"}'
   exit 1
 fi
 
@@ -25,99 +32,139 @@ fi
 
 mkdir -p "$IMG_DIR"
 
-# 1. Gemini 응답에서 텍스트 추출
+# 1. 텍스트 파일에서 콘텐츠 읽기 + 코드블록 래핑 제거
 CONTENT=$(python3 -c "
-import json, sys, re
-
-with open('$RESPONSE_FILE', 'r') as f:
-    data = json.load(f)
-
-text = ''
-if 'candidates' in data and data['candidates']:
-    parts = data['candidates'][0].get('content', {}).get('parts', [])
-    for p in parts:
-        if 'text' in p:
-            text += p['text']
-
-# 코드블록 래핑 제거
+import re, sys
+with open(sys.argv[1], 'r') as f:
+    text = f.read()
 text = re.sub(r'^\`\`\`(?:markdown|yaml|md)?\n', '', text, flags=re.IGNORECASE)
-text = re.sub(r'\n\`\`\`$', '', text)
+text = re.sub(r'\n\`\`\`\$', '', text)
 text = text.strip()
-
 print(text)
-")
+" "$CONTENT_FILE")
 
 if [ -z "$CONTENT" ]; then
-  echo '{"error": "Gemini 응답에서 텍스트를 찾을 수 없습니다"}'
+  echo '{"error": "텍스트 파일이 비어있습니다"}'
   exit 1
 fi
 
-# 2. 프론트매터 검증 + 날짜/카테고리 강제 교체 + 파일명 생성
+# 2. 프론트매터 검증 + 날짜 강제 교체 + 카테고리 검증 + 파일명 생성
+CONTENT_TEMP=$(mktemp)
+echo "$CONTENT" > "$CONTENT_TEMP"
+
 RESULT=$(python3 -c "
 import re, json, sys
 
-content = '''$CONTENT'''
+with open(sys.argv[1], 'r') as f:
+    content = f.read()
 
-# 프론트매터 파싱
+correct_date = sys.argv[2]
+VALID_CATEGORIES = ['saju', 'gwansang', 'dream', 'fengshui', 'gunghap', 'jakming', 'daily']
+
+# 카테고리 한글→영문 매핑 (Gemini가 한글로 넣을 경우 대비)
+CATEGORY_MAP = {
+    '사주': 'saju', '관상': 'gwansang', '꿈해몽': 'dream', '해몽': 'dream',
+    '풍수': 'fengshui', '궁합': 'gunghap', '작명': 'jakming',
+    '오늘의운세': 'daily', '운세': 'daily'
+}
+
 fm_match = re.match(r'^---\n(.*?)\n---\n(.*)', content, re.DOTALL)
 if not fm_match:
-    # 앞뒤 공백/줄바꿈 제거 후 재시도
     content2 = content.strip()
     fm_match = re.match(r'^---\n(.*?)\n---\n(.*)', content2, re.DOTALL)
     if not fm_match:
-        print(json.dumps({'error': '프론트매터를 찾을 수 없습니다', 'preview': content[:200]}))
+        print(json.dumps({'error': 'no frontmatter', 'preview': content[:200]}, ensure_ascii=False))
         sys.exit(0)
 
 frontmatter = fm_match.group(1)
 body = fm_match.group(2).strip()
 
 # 날짜 강제 교체
-frontmatter = re.sub(r'date:\s*[\"\\'].*?[\"\\']', 'date: \"$CORRECT_DATE\"', frontmatter)
+frontmatter = re.sub(r'date:\s*[\"\\x27].*?[\"\\x27]', f'date: \"{correct_date}\"', frontmatter)
 
-# 카테고리 강제 교체
-frontmatter = re.sub(r'category:\s*[\"\\'].*?[\"\\']', 'category: \"$CORRECT_CATEGORY\"', frontmatter)
+# 카테고리 검증 (Gemini가 넣은 값을 읽어서 유효한 slug인지 확인)
+cat_match = re.search(r'category:\s*[\"\\x27](.+?)[\"\\x27]', frontmatter)
+category = cat_match.group(1).strip() if cat_match else ''
 
-# 제목 추출
-title_match = re.search(r'title:\s*[\"\\'](.+?)[\"\\']', frontmatter)
+# 유효한 slug가 아니면 매핑 시도
+if category not in VALID_CATEGORIES:
+    # 한글 매핑
+    for k, v in CATEGORY_MAP.items():
+        if k in category:
+            category = v
+            break
+    else:
+        # 영문 부분 매칭
+        cat_lower = category.lower()
+        for vc in VALID_CATEGORIES:
+            if vc in cat_lower:
+                category = vc
+                break
+        else:
+            category = 'daily'  # 기본값
+
+# 카테고리를 검증된 slug로 교체
+frontmatter = re.sub(r'category:\s*[\"\\x27].*?[\"\\x27]', f'category: \"{category}\"', frontmatter)
+
+title_match = re.search(r'title:\s*[\"\\x27](.+?)[\"\\x27]', frontmatter)
 title = title_match.group(1) if title_match else 'untitled'
 
-# 영문 슬러그 생성
-import unicodedata
 slug = title.lower()
-# 한글 제거
 slug = re.sub(r'[가-힣]+', '', slug)
-# 특수문자 제거
 slug = re.sub(r'[^a-z0-9\s-]', '', slug)
 slug = re.sub(r'\s+', '-', slug).strip('-')
 slug = re.sub(r'-+', '-', slug)[:50]
 
 if not slug or len(slug) < 3:
-    slug = '$CORRECT_CATEGORY-$CORRECT_DATE'
+    slug = f'{category}-post'
 
-filename = f'$CORRECT_DATE-{slug}'
-
-# h2 소제목 추출
-h2_titles = re.findall(r'^## (.+)$', body, re.MULTILINE)
+# KST 시간(HHMM) 포함하여 하루 여러 포스팅 가능하도록
+from datetime import datetime, timezone, timedelta
+kst = datetime.now(timezone(timedelta(hours=9)))
+time_suffix = kst.strftime('%H%M')
+filename = f'{correct_date}-{time_suffix}-{slug}'
+h2_titles = re.findall(r'^## (.+)\$', body, re.MULTILINE)
 
 print(json.dumps({
     'frontmatter': frontmatter,
     'body': body,
     'filename': filename,
     'title': title,
+    'category': category,
     'h2Titles': h2_titles
 }, ensure_ascii=False))
-")
+" "$CONTENT_TEMP" "$CORRECT_DATE")
+
+rm -f "$CONTENT_TEMP"
 
 # 에러 체크
-if echo "$RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(1 if 'error' in d else 0)" 2>/dev/null; then
+if echo "$RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if 'error' in d else 1)" 2>/dev/null; then
   echo "$RESULT"
   exit 1
 fi
 
-FILENAME=$(echo "$RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin)['filename'])")
-TITLE=$(echo "$RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin)['title'])")
-FRONTMATTER=$(echo "$RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin)['frontmatter'])")
-BODY=$(echo "$RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin)['body'])")
+# RESULT를 임시 파일로 저장 (안전한 전달)
+RESULT_FILE=$(mktemp)
+echo "$RESULT" > "$RESULT_FILE"
+
+FILENAME=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['filename'])" "$RESULT_FILE")
+TITLE=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['title'])" "$RESULT_FILE")
+
+# frontmatter와 body를 파일로 저장
+FM_FILE=$(mktemp)
+BODY_FILE=$(mktemp)
+python3 -c "
+import json, sys
+d = json.load(open(sys.argv[1]))
+with open(sys.argv[2], 'w') as f: f.write(d['frontmatter'])
+with open(sys.argv[3], 'w') as f: f.write(d['body'])
+" "$RESULT_FILE" "$FM_FILE" "$BODY_FILE"
+
+# 이미지 프롬프트용 h2 제목 추출
+H2_1=$(python3 -c "import json,sys; t=json.load(open(sys.argv[1]))['h2Titles']; print(t[1] if len(t)>1 else '')" "$RESULT_FILE" 2>/dev/null || echo "")
+H2_2=$(python3 -c "import json,sys; t=json.load(open(sys.argv[1]))['h2Titles']; print(t[3] if len(t)>3 else (t[2] if len(t)>2 else ''))" "$RESULT_FILE" 2>/dev/null || echo "")
+
+rm -f "$RESULT_FILE"
 
 # 3. 이미지 3개 생성
 generate_image() {
@@ -125,43 +172,49 @@ generate_image() {
   local INDEX="$2"
   local IMG_FILE="$FILENAME-$INDEX"
 
-  local RESPONSE=$(curl -s -X POST \
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=$API_KEY" \
-    -H "Content-Type: application/json" \
-    -d "$(python3 -c "
-import json
+  local PROMPT_FILE=$(mktemp)
+  python3 -c "
+import json, sys
 print(json.dumps({
-    'contents': [{'parts': [{'text': '''$PROMPT'''}]}],
+    'contents': [{'parts': [{'text': sys.argv[1]}]}],
     'generationConfig': {'responseModalities': ['TEXT', 'IMAGE']}
 }))
-")" --max-time 90)
+" "$PROMPT" > "$PROMPT_FILE"
 
-  # base64 이미지 추출 및 저장
-  python3 -c "
+  local RESP_FILE=$(mktemp)
+  curl -s -X POST \
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=$API_KEY" \
+    -H "Content-Type: application/json" \
+    -d @"$PROMPT_FILE" \
+    --max-time 90 \
+    -o "$RESP_FILE" 2>/dev/null
+
+  rm -f "$PROMPT_FILE"
+
+  local IMG_RESULT=$(python3 -c "
 import json, base64, sys
 try:
-    data = json.loads('''$RESPONSE''')
+    with open(sys.argv[1], 'r') as f:
+        data = json.load(f)
     parts = data['candidates'][0]['content']['parts']
     for p in parts:
         if 'inlineData' in p:
             img_data = base64.b64decode(p['inlineData']['data'])
             mime = p['inlineData']['mimeType']
             ext = 'jpg' if 'jpeg' in mime else 'png'
-            filepath = '$IMG_DIR/$IMG_FILE.' + ext
+            filepath = sys.argv[2] + '/' + sys.argv[3] + '.' + ext
             with open(filepath, 'wb') as f:
                 f.write(img_data)
-            print(f'/images/posts/$IMG_FILE.{ext}')
+            print('/images/posts/' + sys.argv[3] + '.' + ext)
             sys.exit(0)
     print('')
 except Exception as e:
-    print('', file=sys.stderr)
     print('')
-" 2>/dev/null
-}
+" "$RESP_FILE" "$IMG_DIR" "$IMG_FILE" 2>/dev/null)
 
-# 이미지 프롬프트 생성
-H2_1=$(echo "$RESULT" | python3 -c "import json,sys; t=json.load(sys.stdin)['h2Titles']; print(t[1] if len(t)>1 else '')" 2>/dev/null)
-H2_2=$(echo "$RESULT" | python3 -c "import json,sys; t=json.load(sys.stdin)['h2Titles']; print(t[3] if len(t)>3 else (t[2] if len(t)>2 else ''))" 2>/dev/null)
+  rm -f "$RESP_FILE"
+  echo "$IMG_RESULT"
+}
 
 STYLE="traditional Korean fortune telling, ink wash painting style, elegant, no text in image"
 
@@ -173,25 +226,27 @@ IMG3=$(generate_image "An illustration about '${H2_2:-$TITLE}' for Korean cultur
 
 # 4. 마크다운 파일 조립 + 저장
 python3 -c "
-import json, re, sys
+import json, os, sys
 
-frontmatter = '''$FRONTMATTER'''
-body = '''$BODY'''
-filename = '$FILENAME'
-title = '''$TITLE'''
-img1 = '$IMG1'
-img2 = '$IMG2'
-img3 = '$IMG3'
+fm_file = sys.argv[1]
+body_file = sys.argv[2]
+filename = sys.argv[3]
+title = sys.argv[4]
+img1 = sys.argv[5]
+img2 = sys.argv[6]
+img3 = sys.argv[7]
 
-# 썸네일 추가
+with open(fm_file, 'r') as f:
+    frontmatter = f.read().strip()
+with open(body_file, 'r') as f:
+    body = f.read().strip()
+
 if img1:
     frontmatter += f'\nthumbnail: \"{img1}\"'
 
-# 본문에 이미지 삽입
 lines = body.split('\n')
 h2_indices = [i for i, l in enumerate(lines) if l.startswith('## ')]
 
-# 이미지 2: 2번째 ## 뒤
 if img2 and len(h2_indices) >= 2:
     idx = h2_indices[1] + 1
     lines.insert(idx, '')
@@ -200,7 +255,6 @@ if img2 and len(h2_indices) >= 2:
     for j in range(2, len(h2_indices)):
         h2_indices[j] += 3
 
-# 이미지 3: 4번째 ## 뒤 (없으면 3번째)
 target = 3 if len(h2_indices) >= 4 else (2 if len(h2_indices) >= 3 else -1)
 if img3 and target >= 0:
     idx = h2_indices[target] + 1
@@ -215,9 +269,7 @@ filepath = f'/home/nohhe/saju-blog/content/posts/{filename}.md'
 with open(filepath, 'w') as f:
     f.write(final)
 
-# 이미지 파일 목록
 img_files = []
-import os
 for img_path in [img1, img2, img3]:
     if img_path:
         local_path = '/home/nohhe/saju-blog/public' + img_path
@@ -229,4 +281,6 @@ print(json.dumps({
     'images': img_files,
     'status': 'saved'
 }, ensure_ascii=False))
-"
+" "$FM_FILE" "$BODY_FILE" "$FILENAME" "$TITLE" "$IMG1" "$IMG2" "$IMG3"
+
+rm -f "$FM_FILE" "$BODY_FILE"

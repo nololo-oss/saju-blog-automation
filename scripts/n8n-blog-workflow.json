@@ -19,13 +19,23 @@
     },
     {
       "parameters": {
-        "jsCode": "const categories = [\n  { slug: 'saju', name: '사주(四柱)', topics: [\n    '사주팔자의 기본 구성과 의미', '천간(天干)과 지지(地支)의 관계',\n    '오행(五行)의 상생상극 원리', '일주(日柱)로 보는 성격과 운명',\n    '대운(大運)과 세운(歲運)의 흐름', '사주에서 보는 직업 적성',\n    '사주로 알아보는 건강 관리법', '합(合)과 충(沖)의 의미와 영향',\n    '십신(十神)으로 보는 인간관계', '사주 명리학의 역사와 발전'\n  ]},\n  { slug: 'gwansang', name: '관상(觀相)', topics: [\n    '이마의 생김새로 보는 운세', '눈의 관상과 성격 분석',\n    '코의 형태와 재물운의 관계', '입술 관상으로 보는 인연',\n    '귀의 크기와 형태로 보는 복', '얼굴형으로 보는 전체 운세',\n    '관상에서 점과 사마귀의 의미', '턱의 생김새와 말년운',\n    '눈썹으로 보는 형제운과 성격', '광대뼈와 사회적 성공'\n  ]},\n  { slug: 'dream', name: '꿈해몽(解夢)', topics: [\n    '돼지꿈의 다양한 해석', '뱀꿈이 의미하는 것들',\n    '물에 관한 꿈의 해몽', '하늘을 나는 꿈의 의미',\n    '이빨이 빠지는 꿈 해석', '죽은 사람이 나오는 꿈',\n    '불에 관한 꿈의 해몽', '시험 꿈의 심리적 의미',\n    '꽃에 관한 꿈의 해석', '산에 오르는 꿈의 의미'\n  ]},\n  { slug: 'fengshui', name: '풍수(風水)', topics: [\n    '거실 풍수 인테리어 기본 원칙', '침실 배치와 수면의 질',\n    '현관 풍수로 좋은 기운 들이기', '책상 배치와 학업 및 업무 운',\n    '주방 풍수와 재물운의 관계', '화분과 식물 배치의 풍수 원리',\n    '색상 풍수로 분위기 바꾸기', '거울 배치의 풍수적 의미',\n    '수납 정리와 기운의 흐름', '사무실 풍수 인테리어 팁'\n  ]},\n  { slug: 'daily', name: '오늘의운세(運勢)', topics: [\n    '2026년 상반기 운세 전망', '봄철 운세와 생활 조언',\n    '월별 행운의 색상과 방향', '계절별 건강 운세',\n    '이번 달 재물운 높이는 방법', '연애운을 높이는 일상 습관',\n    '직장인을 위한 이번 주 운세', '학생을 위한 학업 운세',\n    '주간 운세와 행운의 숫자', '절기별 운세와 주의사항'\n  ]}\n];\n\nconst now = new Date();\nconst dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);\nconst catIndex = dayOfYear % categories.length;\nconst category = categories[catIndex];\nconst topicIndex = Math.floor(dayOfYear / categories.length) % category.topics.length;\nconst topic = category.topics[topicIndex];\nconst dateStr = now.toISOString().split('T')[0];\n\nreturn [{ json: { category: category.slug, categoryName: category.name, topic: topic, date: dateStr } }];"
+        "command": "python3 /home/nohhe/saju-blog/scripts/get-recent-posts.py"
       },
-      "id": "category-selector",
-      "name": "카테고리/주제 선택",
+      "id": "recent-posts",
+      "name": "최근 포스트 조회",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = JSON.parse($input.first().json.stdout);\nreturn [{ json: { date: data.date, recentList: data.recentPosts.join('\\n') } }];"
+      },
+      "id": "prompt-prepare",
+      "name": "프롬프트 준비",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [220, 0]
+      "position": [440, 0]
     },
     {
       "parameters": {
@@ -35,7 +45,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: '당신은 명운관(明運館)이라는 한국 전통 역학 블로그의 전문 필진입니다. 사주, 관상, 꿈해몽, 풍수, 운세 등 한국 전통 역학에 대한 깊은 지식을 가지고 있으며, 전통 문화와 지혜의 관점에서 글을 작성합니다.\\n\\n## 작성 규칙\\n1. 한국어로 작성하되, 핵심 용어는 한자를 병기합니다. (예: 사주(四柱))\\n2. 이모지를 사용하지 않습니다.\\n3. 본문은 800자~1500자 분량으로 작성합니다.\\n4. h2(##) 소제목을 최소 4개 이상 사용하여 구조화합니다.\\n5. 전문적이면서도 일반인이 이해할 수 있는 수준으로 작성합니다.\\n\\n## 출력 형식\\n반드시 프론트매터 + 마크다운 본문 형식으로 출력하세요. 코드블록(```)으로 감싸지 마세요. 설명 없이 마크다운만 출력하세요.\\n\\n---\\ntitle: \"글 제목\"\\ndescription: \"SEO용 설명\"\\ndate: \"' + $json.date + '\"\\ncategory: \"' + $json.category + '\"\\ntags: [\"태그1\", \"태그2\", \"태그3\"]\\n---\\n\\n본문...\\n\\n카테고리: ' + $json.categoryName + '\\n주제: ' + $json.topic + '\\n날짜: ' + $json.date }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 2000 } }) }}",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: '당신은 명운관(明運館)이라는 한국 전통 역학 블로그의 전문 필진입니다.\\n\\n## 카테고리 (반드시 아래 7개 중 하나의 영문 slug를 선택)\\n- saju: 사주(四柱) - 사주팔자, 천간지지, 오행, 십신, 대운 등\\n- gwansang: 관상(觀相) - 얼굴 관상, 이마/눈/코/입/귀 등\\n- dream: 꿈해몽(解夢) - 각종 꿈의 해석과 의미\\n- fengshui: 풍수(風水) - 집/사무실 인테리어, 배치, 방위 등\\n- gunghap: 궁합(宮合) - 남녀 궁합, 띠 궁합, 사주 궁합 등\\n- jakming: 작명(作名) - 이름 짓기, 작명법, 한자 이름 등\\n- daily: 오늘의운세(運勢) - 일별/주별/월별/절기별 운세\\n\\n## 최근 포스트 목록 (중복 방지용)\\n' + $json.recentList + '\\n\\n## 지시사항\\n1. 최근 포스트와 중복되지 않는 카테고리와 주제를 자율 선택\\n2. 오늘(' + $json.date + ')의 계절/절기/시사적 맥락 고려\\n3. 특정 카테고리에 몰려있으면 다른 카테고리 선택\\n\\n## 작성 규칙\\n1. 한국어 + 핵심 용어 한자 병기\\n2. 이모지 미사용\\n3. 본문 800~1500자\\n4. h2(##) 소제목 4개 이상\\n5. 전문적이면서 이해하기 쉽게\\n\\n## 출력 형식 (코드블록 없이 마크다운만)\\n---\\ntitle: \"글 제목\"\\ndescription: \"SEO용 설명\"\\ndate: \"' + $json.date + '\"\\ncategory: \"영문slug\"\\ntags: [\"태그1\", \"태그2\", \"태그3\"]\\n---\\n\\n본문...' }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } }) }}",
         "options": {
           "timeout": 60000
         }
@@ -44,7 +54,7 @@
       "name": "Gemini 콘텐츠 생성",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [440, 0],
+      "position": [660, 0],
       "credentials": {
         "httpHeaderAuth": {
           "id": "GEMINI_CREDENTIAL_ID",
@@ -54,33 +64,33 @@
     },
     {
       "parameters": {
-        "jsCode": "// Gemini 응답을 임시 파일로 저장\nconst raw = $input.first().json;\nconst date = $('카테고리/주제 선택').first().json.date;\nconst category = $('카테고리/주제 선택').first().json.category;\n\nreturn [{ json: { response: raw, date: date, category: category } }];"
+        "jsCode": "const raw = $input.first().json;\nconst date = $('프롬프트 준비').first().json.date;\n\nlet text = '';\ntry {\n  const parts = raw.candidates[0].content.parts;\n  for (const p of parts) {\n    if (p.text) text += p.text;\n  }\n} catch(e) {\n  text = JSON.stringify(raw).substring(0, 500);\n}\n\nconst encoded = Buffer.from(text, 'utf-8').toString('base64');\nreturn [{ json: { encoded: encoded, date: date } }];"
       },
       "id": "prepare-data",
       "name": "데이터 준비",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, 0]
+      "position": [880, 0]
     },
     {
       "parameters": {
-        "command": "={{ 'echo ' + JSON.stringify(JSON.stringify($json.response)).replace(/'/g, \"'\\''\") + ' > /tmp/gemini-response.json && bash /home/nohhe/saju-blog/scripts/process-post.sh /tmp/gemini-response.json ' + $json.date + ' ' + $json.category }}"
+        "command": "={{ 'echo ' + $json.encoded + ' | base64 -d > /tmp/post-content.txt && bash /home/nohhe/saju-blog/scripts/process-post.sh /tmp/post-content.txt ' + $json.date }}"
       },
       "id": "process-post",
       "name": "포스트 처리 (검증+이미지+저장)",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
-      "position": [880, 0]
+      "position": [1100, 0]
     },
     {
       "parameters": {
-        "command": "={{ (function() { try { var d = JSON.parse($json.stdout); return 'cd /home/nohhe/saju-blog && git add content/posts/' + d.filename + ' ' + (d.images || []).join(' ') + ' && git commit -m \"feat(content): 자동 포스팅\" && git push 2>&1'; } catch(e) { return 'echo \"이전 단계 오류: ' + ($json.stdout || '').substring(0,100).replace(/\"/g, '') + '\"'; } })() }}"
+        "command": "={{ (function() { try { var d = JSON.parse($json.stdout); return 'git add content/posts/' + d.filename + ' ' + (d.images || []).join(' ') + ' && git commit -m \"feat(content): 자동 포스팅\" && git push 2>&1'; } catch(e) { return 'echo \"이전 단계 오류: ' + ($json.stdout || '').substring(0,100).replace(/\"/g, '') + '\"'; } })() }}"
       },
       "id": "git-push",
       "name": "Git 커밋 & 푸시",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
-      "position": [1100, 0]
+      "position": [1320, 0]
     },
     {
       "parameters": {
@@ -90,14 +100,17 @@
       "name": "Vercel 배포",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
-      "position": [1320, 0]
+      "position": [1540, 0]
     }
   ],
   "connections": {
     "매일 06:00 KST": {
-      "main": [[{ "node": "카테고리/주제 선택", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "최근 포스트 조회", "type": "main", "index": 0 }]]
     },
-    "카테고리/주제 선택": {
+    "최근 포스트 조회": {
+      "main": [[{ "node": "프롬프트 준비", "type": "main", "index": 0 }]]
+    },
+    "프롬프트 준비": {
       "main": [[{ "node": "Gemini 콘텐츠 생성", "type": "main", "index": 0 }]]
     },
     "Gemini 콘텐츠 생성": {

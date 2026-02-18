@@ -21,13 +21,13 @@ export default function Home() {
         </h1>
         <p className="mt-1 text-xs text-accent-light">明運館</p>
         <p className="mt-3 text-[13px] text-muted">
-          사주 · 관상 · 꿈해몽 · 풍수 · 오늘의 운세
+          사주 · 관상 · 꿈해몽 · 풍수 · 궁합 · 작명 · 오늘의 운세
         </p>
       </section>
 
       {/* 카테고리 */}
       <section className="mb-10">
-        <div className="grid grid-cols-5 border-y border-border">
+        <div className="grid grid-cols-7 border-y border-border">
           {categories.map((cat) => (
             <Link
               key={cat.slug}

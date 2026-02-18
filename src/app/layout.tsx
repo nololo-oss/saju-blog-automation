@@ -5,11 +5,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "명운관 | 사주 · 관상 · 꿈해몽 · 풍수",
+    default: "명운관 | 사주 · 관상 · 꿈해몽 · 풍수 · 궁합 · 작명",
     template: "%s | 명운관",
   },
   description:
-    "사주팔자, 관상, 꿈해몽, 풍수, 오늘의 운세까지. 동양 철학으로 풀어보는 나의 운명 이야기.",
+    "사주팔자, 관상, 꿈해몽, 풍수, 궁합, 작명, 오늘의 운세까지. 동양 철학으로 풀어보는 나의 운명 이야기.",
   openGraph: {
     type: "website",
     locale: "ko_KR",

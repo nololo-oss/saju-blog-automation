@@ -36,6 +36,20 @@ export const categories: CategoryMeta[] = [
     color: "bg-[#4a4a4a]",
   },
   {
+    slug: "gunghap",
+    name: "궁합",
+    hanja: "宮合",
+    description: "사주로 알아보는 궁합과 인연의 비밀",
+    color: "bg-[#4a4a4a]",
+  },
+  {
+    slug: "jakming",
+    name: "작명",
+    hanja: "作名",
+    description: "이름에 담긴 운명, 좋은 이름 짓는 법",
+    color: "bg-[#4a4a4a]",
+  },
+  {
     slug: "daily",
     name: "오늘의운세",
     hanja: "運勢",

@@ -2,7 +2,7 @@
 
 ## 프로젝트 개요
 - **이름**: 명운관(明運館)
-- **주제**: 사주, 관상, 꿈해몽, 풍수, 오늘의 운세
+- **주제**: 사주, 관상, 꿈해몽, 풍수, 궁합, 작명, 오늘의 운세
 - **스택**: Next.js 16 + TypeScript + Tailwind CSS v4
 - **배포**: Vercel (CLI 수동 배포, GitHub 자동 연동 아님)
 - **URL**: https://saju-blog-automation.vercel.app
@@ -20,7 +20,7 @@
 title: "글 제목"
 description: "SEO용 설명 (1~2문장)"
 date: "YYYY-MM-DD"
-category: "saju" | "gwansang" | "dream" | "fengshui" | "daily"
+category: "saju" | "gwansang" | "dream" | "fengshui" | "gunghap" | "jakming" | "daily"
 tags: ["태그1", "태그2"]
 ---
 ```
@@ -78,6 +78,8 @@ npx vercel --prod --yes
 | gwansang | 관상 | 觀相 |
 | dream | 꿈해몽 | 解夢 |
 | fengshui | 풍수 | 風水 |
+| gunghap | 궁합 | 宮合 |
+| jakming | 작명 | 作名 |
 | daily | 오늘의운세 | 運勢 |
 
 ## 주요 파일 경로
