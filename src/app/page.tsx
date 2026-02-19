@@ -6,6 +6,22 @@ import CTABanner from "@/components/CTABanner";
 
 export const revalidate = 60; // 1분마다 재검증
 
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "명운관",
+  url: "https://destiny-center.com",
+  description: "사주팔자, 관상, 꿈해몽, 풍수, 궁합, 작명, 오늘의 운세까지. 동양 철학으로 풀어보는 나의 운명 이야기.",
+  potentialAction: {
+    "@type": "SearchAction",
+    target: {
+      "@type": "EntryPoint",
+      urlTemplate: "https://destiny-center.com/category/all?q={search_term_string}",
+    },
+    "query-input": "required name=search_term_string",
+  },
+};
+
 export default function Home() {
   const allPosts = getAllPostMetas();
   const posts = allPosts.slice(0, 10);
@@ -13,6 +29,10 @@ export default function Home() {
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+      />
       {/* 히어로 */}
       <section className="mb-10 text-center">
         <h1

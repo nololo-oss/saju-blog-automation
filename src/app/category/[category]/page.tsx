@@ -15,14 +15,29 @@ interface PageProps {
   searchParams: Promise<{ page?: string }>;
 }
 
+const BASE_URL = "https://destiny-center.com";
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { category } = await params;
   const cat = getCategoryBySlug(category);
   if (!cat) return {};
 
+  const ogImage = `${BASE_URL}/api/og?title=${encodeURIComponent(cat.name + "(" + cat.hanja + ")")}&desc=${encodeURIComponent(cat.description)}`;
+
   return {
     title: `${cat.name}(${cat.hanja})`,
     description: cat.description,
+    alternates: {
+      canonical: `${BASE_URL}/category/${category}`,
+    },
+    openGraph: {
+      title: `${cat.name}(${cat.hanja}) | 명운관`,
+      description: cat.description,
+      type: "website",
+      locale: "ko_KR",
+      url: `${BASE_URL}/category/${category}`,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: cat.name }],
+    },
   };
 }
 
