@@ -16,6 +16,9 @@ export const metadata: Metadata = {
     locale: "ko_KR",
     siteName: "명운관",
   },
+  verification: {
+    google: "fRJHr2XIyl6tsxS7MDQNH5W7QguKrRJy07ZX0aqECUA",
+  },
 };
 
 export default function RootLayout({
