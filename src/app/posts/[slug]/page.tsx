@@ -4,6 +4,8 @@ import { getPostBySlug, getAllSlugs } from "@/lib/posts";
 import CategoryBadge from "@/components/CategoryBadge";
 import CTABanner from "@/components/CTABanner";
 
+const BASE_URL = "https://destiny-center.com";
+
 export const revalidate = 60; // 1분마다 재검증
 
 interface PageProps {
@@ -19,14 +21,31 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const post = await getPostBySlug(slug);
   if (!post) return {};
 
+  const postUrl = `${BASE_URL}/posts/${slug}`;
+  const ogImage = post.frontmatter.thumbnail
+    ? `${BASE_URL}${post.frontmatter.thumbnail}`
+    : `${BASE_URL}/api/og?title=${encodeURIComponent(post.frontmatter.title)}&desc=${encodeURIComponent(post.frontmatter.description ?? "")}`;
+
   return {
     title: post.frontmatter.title,
     description: post.frontmatter.description,
+    alternates: {
+      canonical: postUrl,
+    },
     openGraph: {
       title: post.frontmatter.title,
       description: post.frontmatter.description,
       type: "article",
       locale: "ko_KR",
+      url: postUrl,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: post.frontmatter.title }],
+      publishedTime: post.frontmatter.date,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.frontmatter.title,
+      description: post.frontmatter.description,
+      images: [ogImage],
     },
   };
 }
@@ -36,8 +55,37 @@ export default async function PostPage({ params }: PageProps) {
   const post = await getPostBySlug(slug);
   if (!post) notFound();
 
+  const postUrl = `${BASE_URL}/posts/${slug}`;
+  const ogImage = post.frontmatter.thumbnail
+    ? `${BASE_URL}${post.frontmatter.thumbnail}`
+    : `${BASE_URL}/api/og?title=${encodeURIComponent(post.frontmatter.title)}&desc=${encodeURIComponent(post.frontmatter.description ?? "")}`;
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.frontmatter.title,
+    description: post.frontmatter.description,
+    image: ogImage,
+    datePublished: post.frontmatter.date,
+    dateModified: post.frontmatter.date,
+    url: postUrl,
+    publisher: {
+      "@type": "Organization",
+      name: "명운관",
+      url: BASE_URL,
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": postUrl,
+    },
+  };
+
   return (
     <article className="mx-auto max-w-3xl px-5 py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <header className="mb-8">
         <CategoryBadge category={post.frontmatter.category} />
         <h1

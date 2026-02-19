@@ -15,6 +15,14 @@ export const metadata: Metadata = {
     type: "website",
     locale: "ko_KR",
     siteName: "명운관",
+    images: [
+      {
+        url: "https://destiny-center.com/api/og?title=%EB%AA%85%EC%9A%B4%EA%B4%80&desc=%EC%82%AC%EC%A3%BC%ED%8C%94%EC%9E%90%2C+%EA%B4%80%EC%83%81%2C+%EA%BF%88%ED%95%B4%EB%AA%BD%2C+%ED%92%8D%EC%88%98%2C+%EA%B6%81%ED%95%A9%2C+%EC%9E%91%EB%AA%85",
+        width: 1200,
+        height: 630,
+        alt: "명운관",
+      },
+    ],
   },
   verification: {
     google: "fRJHr2XIyl6tsxS7MDQNH5W7QguKrRJy07ZX0aqECUA",
