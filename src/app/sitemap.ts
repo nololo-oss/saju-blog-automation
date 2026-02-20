@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { getAllPostMetas } from "@/lib/posts";
 import { categories } from "@/lib/categories";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://saju-blog-automation.vercel.app";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://destiny-center.com";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const posts = getAllPostMetas();
