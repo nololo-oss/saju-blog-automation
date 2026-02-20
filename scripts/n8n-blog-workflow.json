@@ -27,7 +27,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const data = JSON.parse($input.first().json.stdout);\nconst todayCount = data.todayCount || 0;\nconst TARGET = 3;\nconst remaining = TARGET - todayCount;\n\nif (remaining <= 0) {\n  return [{ json: { shouldPost: false, date: data.date, recentList: '' } }];\n}\n\nconst now = new Date();\nconst kstHour = (now.getUTCHours() + 9) % 24;\nconst END_HOUR = 23;\nconst remainingHours = END_HOUR - kstHour + 1;\nconst probability = Math.min(remaining / Math.max(remainingHours, 1), 1);\nconst shouldPost = Math.random() < probability;\n\nreturn [{ json: { shouldPost, date: data.date, recentList: data.recentPosts.join('\\n') } }];"
+        "jsCode": "const data = JSON.parse($input.first().json.stdout);\nconst autoCount = data.autoCount || 0;\nconst TARGET = 3;\nconst remaining = TARGET - autoCount;\n\nif (remaining <= 0) {\n  return [{ json: { shouldPost: false, date: data.date, recentList: '' } }];\n}\n\nconst now = new Date();\nconst kstHour = (now.getUTCHours() + 9) % 24;\nconst END_HOUR = 23;\nconst remainingHours = END_HOUR - kstHour + 1;\nconst probability = Math.min(remaining / Math.max(remainingHours, 1), 1);\nconst shouldPost = Math.random() < probability;\n\nreturn [{ json: { shouldPost, date: data.date, recentList: data.recentPosts.join('\\n') } }];"
       },
       "id": "posting-decision",
       "name": "포스팅 결정",
@@ -59,7 +59,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -101,7 +101,7 @@
     },
     {
       "parameters": {
-        "command": "={{ (function() { try { var d = JSON.parse($json.stdout); return 'git add content/posts/' + d.filename + ' ' + (d.images || []).join(' ') + ' && git commit -m \"feat(content): 자동 포스팅\" && git push 2>&1'; } catch(e) { return 'echo \"이전 단계 오류: ' + ($json.stdout || '').substring(0,100).replace(/\"/g, '') + '\"'; } })() }}"
+        "command": "={{ (function() { try { var d = JSON.parse($json.stdout); var title = (d.title || '자동 포스팅').substring(0, 50).replace(/\"/g, ''); return 'cd /home/nohhe/saju-blog && git add content/posts/' + d.filename + ' ' + (d.images || []).join(' ') + ' && git commit -m \"feat(content): ' + title + '\" && git push 2>&1'; } catch(e) { return 'echo \"이전 단계 오류: ' + ($json.stdout || '').substring(0,100).replace(/\"/g, '') + '\"'; } })() }}"
       },
       "id": "git-push",
       "name": "Git 커밋 & 푸시",
@@ -111,7 +111,7 @@
     },
     {
       "parameters": {
-        "command": "npx vercel --prod --yes 2>&1 | tail -10"
+        "command": "cd /home/nohhe/saju-blog && npx vercel --prod --yes 2>&1 | tail -10"
       },
       "id": "vercel-deploy",
       "name": "Vercel 배포",

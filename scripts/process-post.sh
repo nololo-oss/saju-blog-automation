@@ -112,14 +112,41 @@ frontmatter = re.sub(r'category:\s*[\"\\x27].*?[\"\\x27]', f'category: \"{catego
 title_match = re.search(r'title:\s*[\"\\x27](.+?)[\"\\x27]', frontmatter)
 title = title_match.group(1) if title_match else 'untitled'
 
+# 한글 키워드 → 영문 매핑 (슬러그용)
+KEYWORD_MAP = {
+    '사주': 'saju', '관상': 'gwansang', '꿈': 'dream', '해몽': 'dream',
+    '풍수': 'fengshui', '궁합': 'gunghap', '작명': 'jakming',
+    '운세': 'daily', '띠': 'zodiac', '별자리': 'star',
+    '신년': 'newyear', '설날': 'seollal', '추석': 'chuseok',
+    '연애': 'love', '결혼': 'marriage', '재물': 'wealth', '건강': 'health',
+    '취업': 'career', '시험': 'exam', '이사': 'moving', '인연': 'fate',
+    '토정비결': 'tojeong', '부적': 'bujeok', '타로': 'tarot',
+    '오행': 'oheng', '음양': 'eumyang', '천간': 'cheongan', '지지': 'jiji',
+    '십이지': 'twelve-zodiac', '사상체질': 'sasang',
+    '병오': 'byeongoh', '말띠': 'horse', '호랑이': 'tiger',
+    '용': 'dragon', '뱀': 'snake', '토끼': 'rabbit',
+}
+
+# 1) 영문 부분 추출
 slug = title.lower()
-slug = re.sub(r'[가-힣]+', '', slug)
-slug = re.sub(r'[^a-z0-9\s-]', '', slug)
+eng_part = re.sub(r'[^a-z0-9\s-]', '', slug).strip()
+
+# 2) 한글 키워드 매칭
+kr_parts = []
+for kr, en in KEYWORD_MAP.items():
+    if kr in title and en not in kr_parts:
+        kr_parts.append(en)
+
+# 3) 슬러그 조합
+if eng_part and len(re.sub(r'[\s-]', '', eng_part)) >= 3:
+    slug = eng_part
+elif kr_parts:
+    slug = '-'.join(kr_parts[:4])
+else:
+    slug = category
+
 slug = re.sub(r'\s+', '-', slug).strip('-')
 slug = re.sub(r'-+', '-', slug)[:50]
-
-if not slug or len(slug) < 3:
-    slug = f'{category}-post'
 
 # KST 시간(HHMM) 포함하여 하루 여러 포스팅 가능하도록
 from datetime import datetime, timezone, timedelta
@@ -279,11 +306,17 @@ for img_path in [img1, img2, img3]:
         if os.path.exists(local_path):
             img_files.append('public' + img_path)
 
+# 자동 포스팅 카운터 기록
+counter_file = f'/tmp/n8n-autopost-{sys.argv[8]}'
+with open(counter_file, 'a') as cf:
+    cf.write(filename + '\\n')
+
 print(json.dumps({
     'filename': filename + '.md',
+    'title': title,
     'images': img_files,
     'status': 'saved'
 }, ensure_ascii=False))
-" "$FM_FILE" "$BODY_FILE" "$FILENAME" "$TITLE" "$IMG1" "$IMG2" "$IMG3"
+" "$FM_FILE" "$BODY_FILE" "$FILENAME" "$TITLE" "$IMG1" "$IMG2" "$IMG3" "$CORRECT_DATE"
 
 rm -f "$FM_FILE" "$BODY_FILE"
