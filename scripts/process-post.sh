@@ -153,7 +153,7 @@ from datetime import datetime, timezone, timedelta
 kst = datetime.now(timezone(timedelta(hours=9)))
 time_suffix = kst.strftime('%H%M')
 filename = f'{correct_date}-{time_suffix}-{slug}'
-h2_titles = re.findall(r'^## (.+)\$', body, re.MULTILINE)
+h2_titles = re.findall(r'^## (.+)$', body, re.MULTILINE)
 
 print(json.dumps({
     'frontmatter': frontmatter,
